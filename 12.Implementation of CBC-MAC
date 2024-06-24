@@ -1,0 +1,76 @@
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import binascii
+
+def aes_ecb_encrypt(key, plaintext):
+    cipher = AES.new(key, AES.MODE_ECB)
+    try:
+        ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
+        return ciphertext
+    except Exception as e:
+        print(f"Error in AES encryption: {e}")
+        return None
+
+def aes_ecb_decrypt(key, ciphertext):
+    cipher = AES.new(key, AES.MODE_ECB)
+    try:
+        decrypted = unpad(cipher.decrypt(ciphertext), AES.block_size)
+        return decrypted
+    except Exception as e:
+        print(f"Error in AES decryption: {e}")
+        return None
+
+def cbc_mac(key, message):
+    iv = bytes([0] * AES.block_size)
+    encrypted = aes_ecb_encrypt(key, message)
+    if encrypted:
+        return encrypted[-AES.block_size:]
+    else:
+        return None
+
+def adversary_attack(key, message):
+    # Compute T = MAC(K, X)
+    T = cbc_mac(key, message)
+    if T is None:
+        return None
+    
+    # Create X || (X ⊕ T)
+    X = message
+    X_XOR_T = bytes([X[i] ^ T[i] for i in range(len(X))])
+    message2 = X + X_XOR_T
+    
+    # Compute T' = MAC(K, X || (X ⊕ T))
+    T_prime = cbc_mac(key, message2)
+    
+    return T_prime
+
+def bytes_to_hex(byte_array):
+    return binascii.hexlify(byte_array).decode('utf-8')
+
+def hex_to_bytes(hex_string):
+    return binascii.unhexlify(hex_string)
+
+# Test data
+key = b'Sixteen byte key'
+message = b'Hello, world!'
+
+# Calculate CBC-MAC for one-block message X
+T = cbc_mac(key, message)
+if T:
+    print(f"CBC-MAC for message X: {bytes_to_hex(T)}")
+
+    # Adversary computes CBC-MAC for two-block message X || (X ⊕ T)
+    T_prime = adversary_attack(key, message)
+    if T_prime:
+        print(f"CBC-MAC for two-block message X || (X ⊕ T): {bytes_to_hex(T_prime)}")
+
+        # Validation
+        expected_T_prime = cbc_mac(key, message + (message + T))
+        if T_prime == expected_T_prime:
+            print("Adversary's CBC-MAC computation verified successfully.")
+        else:
+            print("Verification failed: Adversary's computed CBC-MAC does not match expected value.")
+    else:
+        print("Adversary's CBC-MAC computation failed.")
+else:
+    print("CBC-MAC computation failed for message X.")
