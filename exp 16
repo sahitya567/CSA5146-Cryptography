@@ -1,0 +1,79 @@
+import string
+import collections
+import re
+from itertools import permutations
+
+# Function to calculate letter frequencies in a text
+def calculate_frequencies(text):
+    # Count occurrences of each letter
+    letter_count = collections.Counter(text.lower())
+    total_letters = sum(letter_count.values())
+    
+    # Calculate frequencies
+    frequencies = {letter: count / total_letters for letter, count in letter_count.items()}
+    
+    # Sort frequencies by value (frequency) in descending order
+    sorted_freq = sorted(frequencies.items(), key=lambda x: x[1], reverse=True)
+    
+    return sorted_freq
+
+# Function to decrypt a ciphertext using a given substitution key
+def decrypt(ciphertext, key):
+    decrypted_text = ''
+    for char in ciphertext:
+        if char.isalpha():
+            if char.isupper():
+                decrypted_text += key[char.lower()].upper()
+            else:
+                decrypted_text += key[char]
+        else:
+            decrypted_text += char
+    
+    return decrypted_text
+
+# Function to perform frequency analysis attack on monoalphabetic substitution cipher
+def frequency_attack(ciphertext, num_solutions=10):
+    # Calculate letter frequencies in the ciphertext
+    ciphertext_freq = calculate_frequencies(re.sub(r'[^a-zA-Z]', '', ciphertext))
+    
+    # Expected English letter frequencies (from most to least common)
+    english_freq = list("etaoinsrhldcumfpgwybvkxjqz")
+    
+    possible_plaintexts = []
+    
+    # Generate all possible decryption keys (permutations of the alphabet)
+    alphabet = list(string.ascii_lowercase)
+    possible_keys = list(permutations(alphabet))
+    
+    # Try each key and score plaintexts based on frequency analysis
+    for key_permutation in possible_keys:
+        key = {alphabet[i]: key_permutation[i] for i in range(26)}
+        decrypted_text = decrypt(ciphertext, key)
+        decrypted_freq = calculate_frequencies(decrypted_text)
+        
+        # Calculate score based on frequency analysis
+        score = 0
+        for i in range(min(len(ciphertext_freq), len(english_freq))):
+            decrypted_letter = decrypted_freq[i][0]
+            expected_letter = english_freq[i]
+            if decrypted_letter == expected_letter:
+                score += 1
+        
+        # Append decrypted text and score to possible plaintexts
+        possible_plaintexts.append((decrypted_text, score))
+    
+    # Sort possible plaintexts by score (higher is better)
+    possible_plaintexts.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return top num_solutions plaintexts
+    return possible_plaintexts[:num_solutions]
+
+# Example usage:
+if __name__ == "__main__":
+    ciphertext = "Xlmw irgvctxih qiwweki mr xlex m fmklx svh mx. Wvxlmw mw rsx xsirk mr xli wxmpp higshi."
+    top_solutions = frequency_attack(ciphertext, num_solutions=10)
+    
+    print(f"Top 10 possible plaintexts for the ciphertext:\n'{ciphertext}'\n")
+    for i, (plaintext, score) in enumerate(top_solutions, start=1):
+        print(f"Solution {i} (Score {score}): {plaintext}")
+        print()
