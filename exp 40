@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_TEXT_SIZE 10000
+#define ALPHABET_SIZE 26
+
+// English letter frequencies (approximate, based on analysis of large text samples)
+const double englishFrequencies[ALPHABET_SIZE] = {
+    8.167, 1.492, 2.782, 4.253, 12.702, 2.228, 2.015, 6.094,
+    6.966, 0.153, 0.772, 4.025, 2.406, 6.749, 7.507, 1.929,
+    0.095, 5.987, 6.327, 9.056, 2.758, 0.978, 2.360, 0.150,
+    1.974, 0.074
+};
+
+// Structure to store frequency analysis results
+typedef struct {
+    char letter;
+    double frequency;
+} Frequency;
+
+// Compare function for qsort to sort frequencies in descending order
+int compareFrequencies(const void *a, const void *b) {
+    Frequency *fa = (Frequency *)a;
+    Frequency *fb = (Frequency *)b;
+    return (fb->frequency - fa->frequency) * 100;
+}
+
+// Function to analyze letter frequency of a given text
+void analyzeFrequency(const char *text, Frequency *frequencies) {
+    int letterCount[ALPHABET_SIZE] = {0};
+    int totalLetters = 0;
+
+    // Count occurrences of each letter
+    for (int i = 0; text[i] != '\0'; i++) {
+        if (text[i] >= 'a' && text[i] <= 'z') {
+            letterCount[text[i] - 'a']++;
+            totalLetters++;
+        } else if (text[i] >= 'A' && text[i] <= 'Z') {
+            letterCount[text[i] - 'A']++;
+            totalLetters++;
+        }
+    }
+
+    // Calculate frequencies
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        frequencies[i].letter = 'a' + i;
+        frequencies[i].frequency = (double)letterCount[i] / totalLetters * 100;
+    }
+
+    // Sort frequencies in descending order
+    qsort(frequencies, ALPHABET_SIZE, sizeof(Frequency), compareFrequencies);
+}
+
+// Function to map frequencies to standard English frequencies and generate possible plaintexts
+void generatePlaintexts(const char *ciphertext, Frequency *cipherFreq, char possiblePlaintexts[][MAX_TEXT_SIZE], int numPlaintexts) {
+    char mapping[ALPHABET_SIZE];
+
+    // Generate mapping based on frequency analysis
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        mapping[cipherFreq[i].letter - 'a'] = 'a' + i;
+    }
+
+    // Generate plaintexts using the mapping
+    for (int i = 0; i < numPlaintexts; i++) {
+        for (int j = 0; ciphertext[j] != '\0'; j++) {
+            if (ciphertext[j] >= 'a' && ciphertext[j] <= 'z') {
+                possiblePlaintexts[i][j] = mapping[ciphertext[j] - 'a'];
+            } else if (ciphertext[j] >= 'A' && ciphertext[j] <= 'Z') {
+                possiblePlaintexts[i][j] = mapping[ciphertext[j] - 'A'];
+            } else {
+                possiblePlaintexts[i][j] = ciphertext[j];
+            }
+        }
+    }
+}
+
+int main() {
+    char ciphertext[MAX_TEXT_SIZE];
+    int numPlaintexts;
+
+    printf("Enter the ciphertext: ");
+    fgets(ciphertext, MAX_TEXT_SIZE, stdin);
+    ciphertext[strcspn(ciphertext, "\n")] = '\0';  // Remove the newline character
+
+    printf("Enter the number of top possible plaintexts to display: ");
+    scanf("%d", &numPlaintexts);
+
+    Frequency cipherFreq[ALPHABET_SIZE];
+    analyzeFrequency(ciphertext, cipherFreq);
+
+    char possiblePlaintexts[numPlaintexts][MAX_TEXT_SIZE];
+    generatePlaintexts(ciphertext, cipherFreq, possiblePlaintexts, numPlaintexts);
+
+    printf("Top %d possible plaintexts:\n", numPlaintexts);
+    for (int i = 0; i < numPlaintexts; i++) {
+        printf("%d: %s\n", i + 1, possiblePlaintexts[i]);
+    }
+
+    return 0;
+}
