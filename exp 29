@@ -1,0 +1,45 @@
+import random
+
+# SHA-3 parameters
+LANE_SIZE = 64
+NUM_LANES = 25
+STATE_SIZE = LANE_SIZE * NUM_LANES
+CAPACITY_BITS = 576
+CAPACITY_LANES = CAPACITY_BITS // LANE_SIZE
+
+# Initialize state
+def initialize_state():
+    state = [0] * NUM_LANES
+    return state
+
+# Generate a message block where each lane has at least one nonzero bit
+def generate_message_block():
+    block = [random.getrandbits(LANE_SIZE) for _ in range(NUM_LANES)]
+    return block
+
+# XOR the message block into the state
+def absorb(state, block):
+    for i in range(len(state)):
+        state[i] ^= block[i]
+    return state
+
+# Check if all capacity lanes have at least one nonzero bit
+def capacity_lanes_nonzero(state):
+    for i in range(CAPACITY_LANES):
+        if state[i] == 0:
+            return False
+    return True
+
+def main():
+    state = initialize_state()
+    rounds = 0
+
+    while not capacity_lanes_nonzero(state):
+        block = generate_message_block()
+        state = absorb(state, block)
+        rounds += 1
+
+    print(f"All capacity lanes have at least one nonzero bit after {rounds} rounds.")
+
+if __name__ == "__main__":
+    main()
